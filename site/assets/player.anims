@@ -1,0 +1,1 @@
+{"dirname":"assets/player","frames":[{"frames":[0,1,2,1],"name":"eat","fps":"20"},{"frames":[2,2,3,4,6,7,8,9,10,11,12,13,13],"name":"die","fps":"13"}],"count":20}
