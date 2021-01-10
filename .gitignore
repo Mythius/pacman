@@ -1,3 +1,4 @@
 node_modules/*
 package-lock.json
 pacman-win32-x64/*
+pacman-installer/*
