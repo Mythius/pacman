@@ -1,0 +1,29 @@
+{
+  "name": "pacman",
+  "version": "1.0.0",
+  "description": "Electron Pacman",
+  "main": "index.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-packager .",
+    "createInstall": "node electron-winstaller pacman"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/mythius/pacman.git"
+  },
+  "author": "Matthias Southwick",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mythius/pacman/issues"
+  },
+  "homepage": "https://github.com/mythius/pacman#readme",
+  "dependencies": {
+    "create-desktop-shortcuts": "^1.2.0",
+    "electron": "^11.1.1"
+  },
+  "devDependencies": {
+    "electron-packager": "^15.2.0",
+    "electron-winstaller": "^4.0.1"
+  }
+}
