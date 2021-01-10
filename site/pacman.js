@@ -1,4 +1,5 @@
 (function(global){
+	Save.init();
 	const pacman = {};
 	global.pacman = pacman;
 	const EDITOR = false;
@@ -12,6 +13,8 @@
 	var ghosts = [];
 	var drawable = [];
 	var timer;
+	var score = 0;
+	var ghost_multiplier = 1;
 	const default_config = {
 		fps:30,
 		w:10,
@@ -20,11 +23,16 @@
 		controls: {u:'w',d:'s',l:'a',r:'d'},
 		wallcolor: 'darkblue'
 	};
+	const MAX_LEVELS = 2;
+	var level = 1;
+	var current_game;
 	var pathfind;
 	const distance = Vector.distance;
 	let can_move = true;
 	var bigdot = false;
 	var game_config = default_config;
+	var LOOP_TIMEOUT;
+	var hideScores = () => {};
 	Tile.prototype.w01 = false;
 	Tile.prototype.w21 = false;
 	Tile.prototype.w10 = false;
@@ -183,24 +191,30 @@
 				if(bigdot) glideVal+=3; // slower;
 				if(!this.alive) glideVal = 2;
 				if(nt == player.currentTile){
-					if(bigdot){
+					if(bigdot && this.alive){
 						this.alive = false;
+						score += ghost_multiplier * 100;
+						ghost_multiplier *= 2;
 						///////////////// START PATHFINDING /////////////
 					} else if(this.alive) {
 						audio.play('assets/sounds/death.wav');
 						can_move = false;
 						player.animation.play('die');
+						setTimeout(stop,1500);
 					}
 				}
 				this.glideTo(nt,glideVal).then(e=>{
 					if(nt == player.currentTile){
-						if(bigdot){
+						if(bigdot && this.alive){
 							this.alive = false;
+							score += ghost_multiplier * 100;
+							ghost_multiplier *= 2;
 							///////////////// START PATHFINDING /////////////
 						} else if(this.alive) {
 							audio.play('assets/sounds/death.wav');
 							can_move = false;
 							player.animation.play('die');
+							setTimeout(stop,1500);
 						}
 					}
 				});
@@ -351,6 +365,7 @@
 					bigdot = true;
 					for(let g of ghosts) g.animation.play('run',true);
 					audio.stop('assets/sounds/bigdot.mp3');
+					ghost_multiplier = 1;
 					audio.play('assets/sounds/bigdot.mp3',true);
 					clearTimeout(timer);
 					timer = setTimeout(()=>{
@@ -363,6 +378,7 @@
 				}
 				if(nt.dotType != ''){
 					audio.play('assets/sounds/wakka.wav',false,.3);
+					score+=5;
 				}
 				nt.dotType = '';
 				if(playerWins() && !EDITOR){
@@ -371,6 +387,24 @@
 					audio.play('assets/sounds/intermission.wav');
 					player.animation.stop();
 					started = false;
+					score += 500;
+					setTimeout(e=>{
+						level++;
+						if(LEVEL <= MAX_LEVELS){
+							stop(false);
+							fetch(`assets/levels/maze${level}.json`).then(request=>{
+								request.json().then(obj=>{
+									obj.score = score;
+									loadMap(canvas,obj).then((request,reject)=>{
+										current_game = request;
+									});
+								});
+							})
+						} else {
+							score += MAX_LEVELS * 250;
+							stop(true);
+						}
+					},5000);
 				}
 			});
 		}
@@ -508,6 +542,11 @@
 		this.makeMove(opts[0]);
 	}
 	function start(CANVAS,config=default_config){
+		can_move = true;
+		bigdot = false;
+
+		ghosts = [];
+		drawable = [];
 		canvas = CANVAS;
 		ctx = canvas.getContext('2d');
 		player = new Sprite('assets/player/01.png');
@@ -530,6 +569,7 @@
 		grid.offsetX = canvas.width/2-grid.width*grid.scale/2;
 		grid.offsetY = canvas.height/2-grid.height*grid.scale/2;
 
+
 		keys.start();
 		
 		if(EDITOR) mouse.start(canvas);
@@ -551,12 +591,32 @@
 			new Ghost('pink',pinkMovement);
 		}
 	}
-	function stop(){
+	async function stop(done=true){
+		if(!playing) return;
 		playing = false;
+		if(LOOP_TIMEOUT) clearTimeout(LOOP_TIMEOUT);
+		if(done) {
+			let hs = await Save.getAll();
+			let addName = false;
+			addName |= hs.length < 10;
+			let amount = 0;
+			for(let score of hs){
+				if(score.data >= score){
+					amount++;
+				}
+			}
+			addName |= amount < 10;
+			if(addName){
+				let name = await input();
+				await Save.save(name,score);
+			}
+			let next = getHighScores();
+			current_game(score);
+		}
 	}
 	function loop(){
 		if(!playing) return;
-		setTimeout(loop,1000/fps);
+		LOOP_TIMEOUT = setTimeout(loop,1000/fps);
 		ctx.clearRect(-2,-2,canvas.width+2,canvas.height+2);
 		handleControls();
 		for(let thing of drawable) {
@@ -581,12 +641,15 @@
 		});
 		return result;
 	}
-	async function loadMap(obj,json={},config=default_config){
+	async function loadMap(obj,json={score:0,level:1},config=default_config){
+		hideScores();
 		if(typeof json == 'string') json = JSON.parse(json);
 		game_config = config;
 		game_config.w = json.width;
 		game_config.h = json.height;
 		game_config.wallcolor = json.wc;
+		level = json.level || 1;
+		score = json.score || 0;
 		start(obj,game_config);
 		let i=0;
 		if(EDITOR){
@@ -604,9 +667,57 @@
 			loop();
 			await audio.play('assets/sounds/start.wav',false,.9);
 		}
+		let gl = new Promise((resolve,reject)=>{
+			current_game = resolve;
+		});
+		return await gl;
+	}
+	function input(data='NEW HIGH SCORE'){
+		return new Promise((res,rej)=>{
+			let e = create('div',data);
+			e.classList.add('score');
+			e.style.borderImage = "url('assets/g/border.png') 50";
+			obj('game').appendChild(e);
+			let input = create('input');
+			e.appendChild(input);
+			input.maxlength = "8";
+			let button = create('button','OK');
+			e.appendChild(button);
+			input.on('keydown',ev=>{
+				if(ev.keyCode == 13){
+					res(input.value);
+					e.remove();
+				}
+			})
+			button.on('click',()=>{
+				res(input.value);
+				e.remove();
+			});
+		});
+	}
+	async function getHighScores(){
+		let highScores = await Save.getAll();
+		highScores = [...highScores].sort((a,b)=>b.data-a.data);
+		let el = create('div','-- HIGH SCORES --<br><br');
+		el.innerHTML += `<br>Player   Score<br><br>`;
+		let i =0;
+		for(let score of highScores){
+			el.innerHTML += score.name + ' ' + score.data + '<br><br>';
+			i++;
+			if(i > 9) break;
+		}
+		el.innerHTML += 'Click [SPACE] to play Again!';
+		el.classList.add('score');
+		el.style.height='500px';
+		obj('game').appendChild(el);
+		const next = () => { el.remove() };
+		hideScores = next;
+		return {next};
 	}
 	pacman.stop = stop;
 	pacman.start = loadMap;
+	pacman.input = input;
+	pacman.highScore = getHighScores;
 	pacman.export = () => JSON.stringify(mapToJSON());
 	pacman.load = canvas => {
 		let ctx = canvas.getContext('2d');

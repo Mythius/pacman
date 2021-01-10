@@ -12,13 +12,56 @@
 			background-color: black;
 			margin: auto;
 			display: block;
+			height: 100%;
 		}
 		body{
 			margin: 0;
 		}
+		.score{
+			font-family: pressstart2p;
+			color: yellow;
+			background-color: rgb(255,139,0);
+			border: 30px solid black;
+			border-image: url('assets/g/border.png') 50;
+			display: block;
+			position: absolute;
+			width: 500px;
+			height: 200px;
+			left: 50%;
+			top: 50%;
+			text-align: center;
+			box-sizing: border-box;
+			padding: 20px;
+			transform: translateX(-50%) translateY(-50%);
+		}
+		.score > input{
+			display: block;
+			font-family: pressstart2p;
+			font-size: 25px;
+			width: 50%;
+			margin: auto;
+			margin-top: 10px;
+			margin-bottom: 10px;
+			background-color: transparent;
+			border: 3px solid black;
+			border-radius: 5px;
+			outline: 0;
+			color: white;
+		}
+		.score > button{
+			width: 50%;
+			font-family: pressstart2p;
+			color: white;
+			background-color: black;
+			font-size: 25px;
+			border: 0;
+			padding: 3px;
+			outline: 0;
+		}
 	</style>
 	<link rel='sortcut icon' href='favicon.ico'>
 	<script src="helpers.js"></script>
+	<script src="save.js"></script>
 	<script src="grid.js"></script>
 	<script src="sprite.js"></script>
 	<script src="audio.js"></script>
@@ -26,7 +69,9 @@
 	<script src="pacman.js"></script>
 </head>
 <body>
-	<canvas width=800 height=600></canvas>
+	<game>
+		<canvas width=800 height=600></canvas>
+	</game>
 	<script src="main.js"></script>
 </body>
 </html>
