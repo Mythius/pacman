@@ -601,14 +601,17 @@
 			addName |= hs.length < 10;
 			let amount = 0;
 			for(let score of hs){
-				if(score.data >= score){
+				if(score.data > score){
 					amount++;
 				}
 			}
 			addName |= amount < 10;
 			if(addName){
 				let name = await input();
-				await Save.save(name,score);
+				let d = await Save.read(name);
+				if(d < score){
+					await Save.save(name,score);
+				}
 			}
 			let next = getHighScores();
 			current_game(score);
@@ -683,6 +686,7 @@
 			input.maxlength = "8";
 			let button = create('button','OK');
 			e.appendChild(button);
+			input.focus();
 			input.on('keydown',ev=>{
 				if(ev.keyCode == 13){
 					res(input.value);
