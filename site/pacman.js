@@ -493,15 +493,23 @@
 		if(!this.alive){
 			goal = grid.getTileAt(4,6);
 			path = pathfind.find(this.currentTile,goal);
-			let dx = path[1].x - x;
-			let dy = path[1].y - y;
-			opts = allopts.filter(e=>e.dx==dx&&e.dy==dy);
+			if(path.length < 2){
+				opts = opts.sort((a,b)=>Math.random()-.5);
+			} else {
+				let dx = path[1].x - x;
+				let dy = path[1].y - y;
+				opts = allopts.filter(e=>e.dx==dx&&e.dy==dy);
+			}
 		} else {
 			goal = player.currentTile;
 			path = pathfind.find(this.currentTile,goal);
-			let dx = path[1].x - x;
-			let dy = path[1].y - y;
-			opts = allopts.filter(e=>e.dx==dx&&e.dy==dy);
+			if(path.length < 2){
+				opts = opts.sort((a,b)=>Math.random()-.5);
+			} else {
+				let dx = path[1].x - x;
+				let dy = path[1].y - y;
+				opts = allopts.filter(e=>e.dx==dx&&e.dy==dy);
+			}
 		}
 		this.makeMove(opts[0]);
 	}
@@ -609,6 +617,9 @@
 			if(addName){
 				let name = await input();
 				let d = await Save.read(name);
+				if(d == undefined){
+					await Save.save(name,score);
+				}
 				if(d < score){
 					await Save.save(name,score);
 				}
