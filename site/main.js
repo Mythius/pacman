@@ -7,7 +7,7 @@ document.on('keydown',async e=>{
 	// return;
 	if(e.key != ' ') return;
 	if(started) return;
-	pacman.load(canvas);
+	// pacman.load(canvas);
 	started = true;
 	let req = await fetch('assets/levels/maze1.json');
 	let data = await req.json();

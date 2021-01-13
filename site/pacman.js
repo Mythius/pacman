@@ -1,4 +1,5 @@
 (function(global){
+	// Save.drop();
 	Save.init();
 	const pacman = {};
 	global.pacman = pacman;
@@ -390,7 +391,7 @@
 					score += 500;
 					setTimeout(e=>{
 						level++;
-						if(LEVEL <= MAX_LEVELS){
+						if(level <= MAX_LEVELS){
 							stop(false);
 							fetch(`assets/levels/maze${level}.json`).then(request=>{
 								request.json().then(obj=>{
@@ -498,7 +499,10 @@
 			} else {
 				let dx = path[1].x - x;
 				let dy = path[1].y - y;
-				opts = allopts.filter(e=>e.dx==dx&&e.dy==dy);
+				opts = opts.filter(e=>e.dx==dx&&e.dy==dy);
+				if(opts.length < 1){
+					opts = this.getDirOpts().sort((a,b)=>Math.random()-.5);
+				}
 			}
 		} else {
 			goal = player.currentTile;
@@ -508,7 +512,10 @@
 			} else {
 				let dx = path[1].x - x;
 				let dy = path[1].y - y;
-				opts = allopts.filter(e=>e.dx==dx&&e.dy==dy);
+				opts = opts.filter(e=>e.dx==dx&&e.dy==dy);
+				if(opts.length < 1){
+					opts = this.getDirOpts().sort((a,b)=>Math.random()-.5);
+				}
 			}
 		}
 		this.makeMove(opts[0]);
@@ -608,8 +615,8 @@
 			let addName = false;
 			addName |= hs.length < 10;
 			let amount = 0;
-			for(let score of hs){
-				if(score.data > score){
+			for(let cscore of hs){
+				if(cscore.data > score){
 					amount++;
 				}
 			}
@@ -625,7 +632,6 @@
 				}
 			}
 			let next = getHighScores();
-			current_game(score);
 		}
 	}
 	function loop(){
@@ -711,6 +717,7 @@
 		});
 	}
 	async function getHighScores(){
+		current_game(score);
 		let highScores = await Save.getAll();
 		highScores = [...highScores].sort((a,b)=>b.data-a.data);
 		let el = create('div','-- HIGH SCORES --<br><br');
