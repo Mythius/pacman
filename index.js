@@ -35,7 +35,7 @@ function createWindow () {
 
   win.loadFile('site/index.html');
 
-  // win.setMenu(null);
+  win.setMenu(null);
 }
 
 app.on('ready', createWindow);
