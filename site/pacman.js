@@ -1,5 +1,6 @@
 (function(global){
 	// Save.drop();
+	Hitbox.show = false;
 	Save.init();
 	const pacman = {};
 	global.pacman = pacman;
@@ -24,7 +25,7 @@
 		controls: {u:'w',d:'s',l:'a',r:'d'},
 		wallcolor: 'darkblue'
 	};
-	const MAX_LEVELS = 2;
+	const MAX_LEVELS = 3;
 	var level = 1;
 	var current_game;
 	var pathfind;
@@ -68,7 +69,9 @@
 			this.addMovement(movement);
 			drawable.push(this);
 			ghosts.push(this);
-			this.glideTo(grid.getTileAt(3,5),1);
+			let startpos = grid.getTileAt(3,5).getCenter();
+			this.position = startpos;
+			this.currentTile = grid.getTileAt(3,5);
 			this.alive = true;
 		}
 		getOpts(tile = this.currentTile){
@@ -191,34 +194,7 @@
 				let glideVal = (tx === nx && ty === ny) ? 273 / (1000 / fps) + 1 : 1;
 				if(bigdot) glideVal+=3; // slower;
 				if(!this.alive) glideVal = 2;
-				if(nt == player.currentTile){
-					if(bigdot && this.alive){
-						this.alive = false;
-						score += ghost_multiplier * 100;
-						ghost_multiplier *= 2;
-						///////////////// START PATHFINDING /////////////
-					} else if(this.alive) {
-						audio.play('assets/sounds/death.wav');
-						can_move = false;
-						player.animation.play('die');
-						setTimeout(stop,1500);
-					}
-				}
-				this.glideTo(nt,glideVal).then(e=>{
-					if(nt == player.currentTile){
-						if(bigdot && this.alive){
-							this.alive = false;
-							score += ghost_multiplier * 100;
-							ghost_multiplier *= 2;
-							///////////////// START PATHFINDING /////////////
-						} else if(this.alive) {
-							audio.play('assets/sounds/death.wav');
-							can_move = false;
-							player.animation.play('die');
-							setTimeout(stop,1500);
-						}
-					}
-				});
+				this.glideTo(nt,glideVal);
 				if(tx > 2 && tx < 7 && ty > 4 && ty < 7){
 					this.alive = true;
 					if(bigdot){
@@ -328,10 +304,26 @@
 		this.dy = 0;
 	}
 	function handleControls(){
+		// Key detection happens every frame
 		if(keys.down(controls.u)) player.nextMove = controls.u;
 		if(keys.down(controls.d)) player.nextMove = controls.d;
 		if(keys.down(controls.l)) player.nextMove = controls.l;
 		if(keys.down(controls.r)) player.nextMove = controls.r;
+		// Collision Detection happens every frame
+		for(let g of ghosts){
+			if(g.touches(player)){
+				if(bigdot && g.alive){
+					g.alive = false;
+					score += ghost_multiplier * 100;
+					ghost_multiplier *= 2;
+				} else if(g.alive && can_move) {
+					// can_move = false;
+					// audio.play('assets/sounds/death.wav');
+					// player.animation.play('die');
+					// setTimeout(stop,1500);
+				}
+			}
+		}
 	}
 	function playerControls(){
 		const THIS = this;
@@ -402,7 +394,7 @@
 								});
 							})
 						} else {
-							score += MAX_LEVELS * 250;
+							score += MAX_LEVELS * 500;
 							stop(true);
 						}
 					},5000);
@@ -559,7 +551,6 @@
 	function start(CANVAS,config=default_config){
 		can_move = true;
 		bigdot = false;
-
 		ghosts = [];
 		drawable = [];
 		canvas = CANVAS;
@@ -575,30 +566,21 @@
 		fps = config.fps;
 		wallcolor = config.wallcolor;
 		controls = config.controls;
-
 		grid = new Grid(config.w,config.h,canvas.height/config.h);
 		drawable.push(grid);
 		drawable.push(player);
 		pathfind.grid = grid;
-
 		grid.offsetX = canvas.width/2-grid.width*grid.scale/2;
 		grid.offsetY = canvas.height/2-grid.height*grid.scale/2;
-
-
 		keys.start();
-		
 		if(EDITOR) mouse.start(canvas);
-
 		canvas = canvas;
 		global.ctx = ctx;
 		global.grid = grid;
 		global.player = player;
 		global.ghosts = ghosts;
-
 		if(EDITOR) loadWalls();
-
 		player.glideTo(grid.getTileAt(0,0),1);
-
 		if(!EDITOR){
 			new Ghost('cyan',cyanMovement);
 			new Ghost('orange',orangeMovement);
@@ -661,14 +643,16 @@
 		});
 		return result;
 	}
-	async function loadMap(obj,json={score:0,level:1},config=default_config){
+	async function loadMap(obj,json={score:0},config=default_config){
+		let gl = new Promise((resolve,reject)=>{
+			current_game = resolve;
+		});
 		hideScores();
 		if(typeof json == 'string') json = JSON.parse(json);
 		game_config = config;
 		game_config.w = json.width;
 		game_config.h = json.height;
 		game_config.wallcolor = json.wc;
-		level = json.level || 1;
 		score = json.score || 0;
 		start(obj,game_config);
 		let i=0;
@@ -687,9 +671,6 @@
 			loop();
 			await audio.play('assets/sounds/start.wav',false,.9);
 		}
-		let gl = new Promise((resolve,reject)=>{
-			current_game = resolve;
-		});
 		return await gl;
 	}
 	function input(data='NEW HIGH SCORE'){
@@ -717,7 +698,6 @@
 		});
 	}
 	async function getHighScores(){
-		current_game(score);
 		let highScores = await Save.getAll();
 		highScores = [...highScores].sort((a,b)=>b.data-a.data);
 		let el = create('div','-- HIGH SCORES --<br><br');
@@ -734,6 +714,8 @@
 		obj('game').appendChild(el);
 		const next = () => { el.remove() };
 		hideScores = next;
+		current_game(score);
+		started = false;
 		return {next};
 	}
 	pacman.stop = stop;
@@ -759,16 +741,11 @@
 
 
 (function(global){
-
 	const pathfind = {};
 	global.pathfind = pathfind;
-
 	var open_set,closed_set,stack,start,end;
-
 	var finding = false;
-
 	pathfind.grid = null; // set this manually
-
 	function getOpts(tile){
 			let curtile = tile;
 			let up = curtile.w10;
@@ -786,7 +763,6 @@
 			if(!down) opts.push(DOWN);
 			return opts;
 	}
-
 	Tile.prototype.getTouching = function(){
 		let x = this.x;
 		let y = this.y;
@@ -807,9 +783,7 @@
 		}
 		return touching;
 	}
-
 	const heuristic = (a,b) => Vector.distance(a.x,a.y,b.x,b.y);
-
 	function find(s,e){
 		start = s;
 		end = e;
@@ -836,7 +810,6 @@
 
 		return stack;
 	}
-
 	function step(){
 		if(open_set.length > 0){
 			let winner = 0;
@@ -875,13 +848,10 @@
 			return;
 		}
 	}
-
 	function trace(n){
 		stack.unshift(n);
 		if(n == start) return;
 		trace(n.prev);
 	}
-
-
 	pathfind.find = find;
 })(pacman);
