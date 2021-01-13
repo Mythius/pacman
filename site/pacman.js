@@ -317,10 +317,10 @@
 					score += ghost_multiplier * 100;
 					ghost_multiplier *= 2;
 				} else if(g.alive && can_move) {
-					// can_move = false;
-					// audio.play('assets/sounds/death.wav');
-					// player.animation.play('die');
-					// setTimeout(stop,1500);
+					can_move = false;
+					audio.play('assets/sounds/death.wav');
+					player.animation.play('die');
+					setTimeout(stop,1500);
 				}
 			}
 		}
