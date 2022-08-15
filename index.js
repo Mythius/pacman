@@ -1,5 +1,4 @@
 const { app, BrowserWindow } = require('electron');
-const createDesktopShortcut = require('create-desktop-shortcuts');
 
 const name = "pacman";
 
@@ -12,14 +11,6 @@ function createWindow () {
     },
     icon: __dirname + '/favicon.ico'
   })
-  if (process.argv.length > 1 && process.argv[1] != '.') {
-      const shortcutsCreated = createDesktopShortcut({
-          windows: { 
-              filePath: `%appdata%\\..\\local\\${name}\\${name}.exe`,
-              icon: __dirname + '\\favicon.ico'
-          }
-      });
-  }
 }
 
 function createWindow () {
