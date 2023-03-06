@@ -1,10 +1,10 @@
 (function(global){
 	// Save.drop();
 	Hitbox.show = false;
-	Save.init();
+	// document.cookie='highscores=[]';
 	const pacman = {};
 	global.pacman = pacman;
-	const EDITOR = false;
+	var EDITOR = false;
 	let canvas,ctx,game;
 	var playing = false;
 	var fps = 30;
@@ -588,30 +588,31 @@
 			new Ghost('pink',pinkMovement);
 		}
 	}
+	function readData(name){
+		let d = window.localStorage[name];
+		if(d) return d;
+		return '[]';
+	}
 	async function stop(done=true){
 		if(!playing) return;
 		playing = false;
 		if(LOOP_TIMEOUT) clearTimeout(LOOP_TIMEOUT);
 		if(done) {
-			let hs = await Save.getAll();
+			let hs = JSON.parse(readData('highscore'));
 			let addName = false;
-			addName |= hs.length < 10;
+			addName |= hs.length < 5;
 			let amount = 0;
 			for(let cscore of hs){
-				if(cscore.data > score){
+				if(cscore.score > score){
 					amount++;
 				}
 			}
-			addName |= amount < 10;
+			addName |= amount < 5;
 			if(addName){
 				let name = await input();
-				let d = await Save.read(name);
-				if(d == undefined){
-					await Save.save(name,score);
-				}
-				if(d < score){
-					await Save.save(name,score);
-				}
+				hs.push({name,score});
+				let data = JSON.stringify(hs.sort((a,b)=>b.score-a.score).slice(0,5));
+				window.localStorage.highscore=data;
 			}
 			let next = getHighScores();
 		}
@@ -698,13 +699,13 @@
 		});
 	}
 	async function getHighScores(){
-		let highScores = await Save.getAll();
+		let highScores = JSON.parse(readData('highscore'));
 		highScores = [...highScores].sort((a,b)=>b.data-a.data);
 		let el = create('div','-- HIGH SCORES --<br><br');
 		el.innerHTML += `<br>Player   Score<br><br>`;
 		let i =0;
 		for(let score of highScores){
-			el.innerHTML += score.name + ' ' + score.data + '<br><br>';
+			el.innerHTML += score.name + ' ' + score.score + '<br><br>';
 			i++;
 			if(i > 9) break;
 		}
