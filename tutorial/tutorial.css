@@ -1,0 +1,16 @@
+keyshow{
+	display: inline-block;
+	padding: 10px 30px 10px 30px;
+	color: white;
+	background-color: #222;
+	font-family: monospace;
+	font-size: 18px;
+	position: absolute;
+	right: 0;
+	top: 50%;
+	transform: translateY(-50%);
+	z-index: 99;
+}
+keyshow > img{
+	transform: translateY(30%);
+}

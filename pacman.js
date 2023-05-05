@@ -4,7 +4,7 @@
 	// document.cookie='highscores=[]';
 	const pacman = {};
 	global.pacman = pacman;
-	var EDITOR = false;
+	var EDITOR = true;
 	let canvas,ctx,game;
 	var playing = false;
 	var fps = 30;
@@ -17,15 +17,15 @@
 	var timer;
 	var score = 0;
 	var ghost_multiplier = 1;
-	const default_config = {
+	var default_config = {
 		fps:30,
 		w:10,
 		h:13,
 		scale:40,
-		controls: {u:'w',d:'s',l:'a',r:'d'},
+		controls: {u:'arrowup',d:'arrowdown',l:'arrowleft',r:'arrowright'},
 		wallcolor: 'darkblue'
 	};
-	const MAX_LEVELS = 3;
+	var MAX_LEVELS = 3;
 	var level = 1;
 	var current_game;
 	var pathfind;
@@ -186,9 +186,9 @@
 			let ty = this.currentTile.y + this.dy;
 			let nt = grid.getTileAt(nx,ny);
 			if(!this.alive){
-				this.animation.play('dead-'+opt.dir,true);
+				this.animation?.play('dead-'+opt.dir,true);
 			} else if(!bigdot){
-				this.animation.play(opt.dir,true);
+				this.animation?.play(opt.dir,true);
 			}
 			if(nt != this.currentTile){
 				let glideVal = (tx === nx && ty === ny) ? 273 / (1000 / fps) + 1 : 1;
@@ -303,12 +303,31 @@
 		this.dx = 0;
 		this.dy = 0;
 	}
+	function saveLevel(){
+		let levels = getCustomLevels();
+		levels.push(mapToJSON());
+		window.localStorage.custom_levels = JSON.stringify(levels);
+		started = false;
+		alert('Level Saved!');
+	}
 	function handleControls(){
 		// Key detection happens every frame
 		if(keys.down(controls.u)) player.nextMove = controls.u;
 		if(keys.down(controls.d)) player.nextMove = controls.d;
 		if(keys.down(controls.l)) player.nextMove = controls.l;
 		if(keys.down(controls.r)) player.nextMove = controls.r;
+		if(keys.down('control') && keys.down('s') && EDITOR){
+			saveLevel(); 
+			keys.keys['s'] = false;
+		}
+		if(keys.down('f4')){
+			if(FULLSCREEN){
+				document.exitFullscreen();
+			} else {
+				obj('game').requestFullscreen();
+			}
+			keys.keys['f4'] = false;
+		}
 		// Collision Detection happens every frame
 		for(let g of ghosts){
 			if(g.touches(player)){
@@ -427,18 +446,18 @@
 			let active_tile = grid.getActiveTile();
 			let types = ['','small','big'];
 			if(active_tile){
-				if(keys.down('arrowup')){
+				if(keys.down('w')){
 					active_tile.setWall(0,-1,'toggle');
-					keys.keys['arrowup'] = false;
-				} else if(keys.down('arrowdown')){
+					keys.keys['w'] = false;
+				} else if(keys.down('s')){
 					active_tile.setWall(0,1,'toggle');
-					keys.keys['arrowdown'] = false;
-				} else if(keys.down('arrowright')){
+					keys.keys['s'] = false;
+				} else if(keys.down('d')){
 					active_tile.setWall(1,0,'toggle');
-					keys.keys['arrowright'] = false;
-				} else if(keys.down('arrowleft')){
+					keys.keys['d'] = false;
+				} else if(keys.down('a')){
 					active_tile.setWall(-1,0,'toggle');
-					keys.keys['arrowleft'] = false;
+					keys.keys['a'] = false;
 				} else if(keys.down(' ')){
 					let ix = Math.max(types.indexOf(active_tile.dotType));
 					ix = (ix + 1) % 3;
@@ -573,7 +592,7 @@
 		grid.offsetX = canvas.width/2-grid.width*grid.scale/2;
 		grid.offsetY = canvas.height/2-grid.height*grid.scale/2;
 		keys.start();
-		if(EDITOR) mouse.start(canvas);
+		if(EDITOR) mouse.start(obj('game'));
 		canvas = canvas;
 		global.ctx = ctx;
 		global.grid = grid;
@@ -701,7 +720,7 @@
 	async function getHighScores(){
 		let highScores = JSON.parse(readData('highscore'));
 		highScores = [...highScores].sort((a,b)=>b.data-a.data);
-		let el = create('div','-- HIGH SCORES --<br><br');
+		let el = create('div','-- HIGH SCORES --<br>');
 		el.innerHTML += `<br>Player   Score<br><br>`;
 		let i =0;
 		for(let score of highScores){
@@ -709,7 +728,7 @@
 			i++;
 			if(i > 9) break;
 		}
-		el.innerHTML += 'Click [SPACE] to play Again!';
+		el.innerHTML += '<br>Click [SPACE] to play Again!<br><br><br>Click [H] to go home';
 		el.classList.add('score');
 		el.style.height='500px';
 		obj('game').appendChild(el);
@@ -719,24 +738,73 @@
 		started = false;
 		return {next};
 	}
+	function getCustomLevels(){
+		let levels = JSON.parse(readData('custom_levels'));
+		return levels;
+	}
+	function loadCustomLevel(){
+		return new Promise((res,rej)=>{
+			let levels = getCustomLevels();
+			let el = create('div','-- CUSTOM LEVELS --<br><br>');
+			if(levels.length > 0){
+				for(let i=0;i<levels.length;i++){
+					el.innerHTML += `Level #${(i+1)}<br>`;
+				}
+			} else {
+				el.innerHTML += 'No Custom Levels';
+				setTimeout(()=>{
+					el.remove();
+					res();
+				},1000);
+			}
+			el.classList.add('score');
+			el.style.height='500px';
+			obj('game').appendChild(el);
+			document.on('keydown',chooseLevel);
+			function chooseLevel(e){
+				let n = Number(e.key);
+				if(!isNaN(n)){
+					if(levels[n-1]){
+						el.remove();
+						res(levels[n-1]);
+						document.removeEventListener('keydown',chooseLevel);
+					}
+				}
+			}
+		});
+	}
 	pacman.stop = stop;
 	pacman.start = loadMap;
 	pacman.input = input;
 	pacman.highScore = getHighScores;
+	pacman.loadCustomLevel = loadCustomLevel;
+	pacman.getCustomLevels = getCustomLevels;
 	pacman.export = () => JSON.stringify(mapToJSON());
+	pacman.clearCustomLevels = () =>{
+		window.localStorage.custom_levels='[]';
+	}
+	pacman.hideScores = function(){
+		hideScores();
+	}
 	pacman.load = canvas => {
 		let ctx = canvas.getContext('2d');
 		let logo = new Image();
 		logo.src = 'assets/g/logo.jpg';
 		document.fonts.ready.then(e=>{
-			ctx.font = '30px pressstart2p';
+			ctx.font = '28px pressstart2p';
 			ctx.fillStyle = '#fcba03';
-			ctx.fillText('Press SPACE to Start',canvas.width/7,canvas.height*3/4);
+			ctx.textAlign = 'center';
+			ctx.fillText('Press [SPACE] to Start',canvas.width/2,canvas.height/2+50);
+			ctx.fillText('Press [L] for Level Editor',canvas.width/2,canvas.height/2+100);
+			ctx.fillText('Press [C] for Custom Levels',canvas.width/2,canvas.height/2+150);
 		});
 		logo.onload = () => {
-			ctx.drawImage(logo,0,canvas.height/2-logo.height/2,canvas.width,canvas.height/3);
+			ctx.drawImage(logo,0,canvas.height/3-logo.height/2,canvas.width,canvas.height/3);
 		}
 		pathfind = pacman.pathfind;
+	}
+	pacman.edit = ed => {
+		EDITOR = ed;
 	}
 })(this);
 
