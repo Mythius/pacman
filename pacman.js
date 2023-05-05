@@ -320,6 +320,16 @@
 			saveLevel(); 
 			keys.keys['s'] = false;
 		}
+		if(keys.down('escape')){
+			started = false;
+			pacman.stop();
+			audio.stopAll();
+			pacman.hideScores();
+			setTimeout(()=>{
+				ctx.clearRect(-2,-2,canvas.width+2,canvas.height+2);
+				pacman.load(canvas);
+			},1000/30);
+		}
 		if(keys.down('f4')){
 			if(FULLSCREEN){
 				document.exitFullscreen();
